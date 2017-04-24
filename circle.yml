@@ -13,6 +13,7 @@ test:
   override:
     - npm test
     - npm run eslint
+    - npm run build
 
 deployment:
     staging:
