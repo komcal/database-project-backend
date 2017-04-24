@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { respondResult, respondErrors } from '../utilities';
-import pool from '../db-config';
+import { getAllFarm } from '../models';
 
 const router = Router();
 
@@ -10,10 +10,8 @@ router.get('/', (req, res) => {
 
 router.get('/query', async (req, res) => {
   try {
-    const response = await pool.query(`
-      SELECT * FROM FARM;
-    `);
-    respondResult(res)(response.rows);
+    const response = await getAllFarm();
+    respondResult(res)(response);
   } catch (err) {
     respondErrors(res)(err);
   }
