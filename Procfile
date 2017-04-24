@@ -1,1 +1,1 @@
-web: npm install -g babel-cli && npm install && npm run build && npm start
+web: node ./scripts/prepare-install && npm install && npm run build && node ./build/bin/server
