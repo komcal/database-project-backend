@@ -1,2 +1,2 @@
 export { getAllFarm, getFarmByID } from './farm';
-export { getAllPrice } from './price';
+export { getAllPrice, getPriceByProduct } from './price';
