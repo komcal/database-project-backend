@@ -1,1 +1,1 @@
-export { getAllFarm } from './farm';
+export { getAllFarm, getFarmByID } from './farm';
