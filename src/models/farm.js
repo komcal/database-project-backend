@@ -6,3 +6,13 @@ export const getAllFarm = async () => {
   `);
   return res.rows;
 };
+
+export const getFarmByID = async (id) => {
+  const res = await pool.query(`
+    SELECT name, product_id, date, price FROM PRICE
+    INNER JOIN FARM
+    ON FARM.id = PRICE.farm_id
+    WHERE farm_id = ${id};
+  `);
+  return res.rows;
+};
