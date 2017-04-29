@@ -63,7 +63,7 @@ export const getAvgByProduct = async (id) => {
     JOIN farmproduct
       ON farmproduct.id = farmproductid
     WHERE product_id = ${id}
-    ORDER BY YEAR ASC, MONTH ASC
+    ORDER BY year ASC, month ASC
   `);
   const avgFromProduct = await pool.query(`
     SELECT farm_id, AVG(price) AS avg , date_part('year' ,pricestamp.date) AS year, date_part('month', pricestamp.date) AS month
@@ -73,8 +73,8 @@ export const getAvgByProduct = async (id) => {
     JOIN farmproduct
       ON farmproduct.id = farmproductid
     WHERE product_id = ${id}
-    GROUP BY farm_id,product_id, year, MONTH
-    ORDER BY farm_id ASC, YEAR ASC, MONTH ASC
+    GROUP BY farm_id,product_id, year, month
+    ORDER BY farm_id ASC, year ASC, month ASC
   `);
   const formattedData = monthFromProduct.rows.reduce((sum, row) => {
     const data = {
