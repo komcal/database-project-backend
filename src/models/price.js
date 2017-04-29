@@ -40,23 +40,23 @@ export const getPriceByProduct = async (id) => {
 
 export const getAvgByProduct = async (id) => {
   const farmIdFromProduct = await pool.query(`
-  SELECT DISTINCT farm_id, name
-  FROM price
-  JOIN pricestamp
-    ON price.price_id = pricestamp.id
-  JOIN farmproduct
-    ON farmproduct.id = farmproductid
-  JOIN farm
-    ON farm_id = farm.id
-  WHERE product_id = ${id}
-  ORDER BY farm_id ASC
+    SELECT DISTINCT farm_id, name
+    FROM price
+    JOIN pricestamp
+      ON price.price_id = pricestamp.id
+    JOIN farmproduct
+      ON farmproduct.id = farmproductid
+    JOIN farm
+      ON farm_id = farm.id
+    WHERE product_id = ${id}
+    ORDER BY farm_id ASC
   `);
   const farmIdToName = farmIdFromProduct.rows.reduce((sum, val) => {
     sum[val.farm_id] = val.name.replace(/\s+$/, '');
     return sum;
   }, {});
   const monthFromProduct = await pool.query(`
-  SELECT DISTINCT date_part('year' ,pricestamp.date) AS year, date_part('month', pricestamp.date) AS month
+    SELECT DISTINCT date_part('year' ,pricestamp.date) AS year, date_part('month', pricestamp.date) AS month
     FROM price
     JOIN pricestamp
       ON price.price_id = pricestamp.id
