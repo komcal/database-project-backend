@@ -52,7 +52,7 @@ export const getAvgByProduct = async (id) => {
   ORDER BY farm_id ASC
   `);
   const farmIdToName = farmIdFromProduct.rows.reduce((sum, val) => {
-    sum[val.farm_id] = val.name.replace(/\s+$/,'');
+    sum[val.farm_id] = val.name.replace(/\s+$/, '');
     return sum;
   }, {});
   const monthFromProduct = await pool.query(`
@@ -80,7 +80,7 @@ export const getAvgByProduct = async (id) => {
     const data = {
       time: `${row.year} ${row.month}`
     };
-    const price = avgFromProduct.rows.filter((val) => (val.year === row.year && val.month === row.month));
+    const price = avgFromProduct.rows.filter(val => (val.year === row.year && val.month === row.month));
     price.forEach((val) => {
       data[farmIdToName[val.farm_id]] = val.avg;
     });
