@@ -52,7 +52,7 @@ export const getAvgByProduct = async (id) => {
   ORDER BY farm_id ASC
   `);
   const farmIdToName = farmIdFromProduct.rows.reduce((sum, val) => {
-    sum[val.farm_id] = val.name.replace(/\s+/,'');
+    sum[val.farm_id] = val.name.replace(/\s+$/,'');
     return sum;
   }, {});
   const monthFromProduct = await pool.query(`
