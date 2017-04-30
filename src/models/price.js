@@ -38,7 +38,7 @@ export const getPriceByProduct = async (id) => {
   return res;
 };
 
-export const getAvgByProduct = async (id) => {
+const getAvgByProductOnTime = async (id) => {
   const farmIdFromProduct = await pool.query(`
     SELECT DISTINCT farm_id, name
     FROM price
@@ -88,4 +88,8 @@ export const getAvgByProduct = async (id) => {
     return sum;
   }, []);
   return formattedData;
+};
+
+export const getAvgByProduct = (id) => {
+  return getAvgByProductOnTime(id);
 };
