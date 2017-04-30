@@ -38,7 +38,7 @@ export const getPriceByProduct = async (id) => {
   return res;
 };
 
-const getAvgByProductOnTime = async (id) => {
+const getAvgByProductOnTime = async (id, type) => {
   const farmIdFromProduct = await pool.query(`
     SELECT DISTINCT farm_id, name
     FROM price
@@ -55,32 +55,32 @@ const getAvgByProductOnTime = async (id) => {
     sum[val.farm_id] = val.name.replace(/\s+$/, '');
     return sum;
   }, {});
-  const monthFromProduct = await pool.query(`
-    SELECT DISTINCT date_part('year' ,pricestamp.date) AS year, date_part('month', pricestamp.date) AS month
+  const timeFromProduct = await pool.query(`
+    SELECT DISTINCT date_part('year' ,pricestamp.date) AS year, date_part('${type}', pricestamp.date) AS ${type}
     FROM price
     JOIN pricestamp
       ON price.price_id = pricestamp.id
     JOIN farmproduct
       ON farmproduct.id = farmproductid
     WHERE product_id = ${id}
-    ORDER BY year ASC, month ASC
+    ORDER BY year ASC, ${type} ASC
   `);
   const avgFromProduct = await pool.query(`
-    SELECT farm_id, AVG(price) AS avg , date_part('year' ,pricestamp.date) AS year, date_part('month', pricestamp.date) AS month
+    SELECT farm_id, AVG(price) AS avg , date_part('year' ,pricestamp.date) AS year, date_part('${type}', pricestamp.date) AS ${type}
     FROM price
     JOIN pricestamp
       ON price.price_id = pricestamp.id
     JOIN farmproduct
       ON farmproduct.id = farmproductid
     WHERE product_id = ${id}
-    GROUP BY farm_id,product_id, year, month
-    ORDER BY farm_id ASC, year ASC, month ASC
+    GROUP BY farm_id,product_id, year, ${type}
+    ORDER BY farm_id ASC, year ASC, ${type} ASC
   `);
-  const formattedData = monthFromProduct.rows.reduce((sum, row) => {
+  const formattedData = timeFromProduct.rows.reduce((sum, row) => {
     const data = {
-      time: `${row.year} ${row.month}`
+      time: `${row.year} ${row[type]}`
     };
-    const price = avgFromProduct.rows.filter(val => (val.year === row.year && val.month === row.month));
+    const price = avgFromProduct.rows.filter(val => (val.year === row.year && val[type] === row[type]));
     price.forEach((val) => {
       data[farmIdToName[val.farm_id]] = val.avg;
     });
@@ -91,5 +91,5 @@ const getAvgByProductOnTime = async (id) => {
 };
 
 export const getAvgByProduct = (id) => {
-  return getAvgByProductOnTime(id);
+  return getAvgByProductOnTime(id, 'month');
 };
