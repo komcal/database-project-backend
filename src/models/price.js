@@ -59,6 +59,7 @@ const getAvgByProductOnTime = async (id, type) => {
       default: return 'YEAR';
     }
   };
+
   const farmIdFromProduct = await pool.query(`
     SELECT DISTINCT farm_id, name
     FROM price
@@ -71,10 +72,12 @@ const getAvgByProductOnTime = async (id, type) => {
     WHERE product_id = ${id}
     ORDER BY farm_id ASC
   `);
+
   const farmIdToName = farmIdFromProduct.rows.reduce((sum, val) => {
     sum[val.farm_id] = val.name.replace(/\s+$/, '');
     return sum;
   }, {});
+
   const timeFromProduct = await pool.query(`
     SELECT DISTINCT date_part('year' ,pricestamp.date) AS year, date_part('${type}', pricestamp.date) AS ${type}
     FROM price
@@ -85,6 +88,7 @@ const getAvgByProductOnTime = async (id, type) => {
     WHERE product_id = ${id}
     ORDER BY year ASC, ${type} ASC
   `);
+
   const avgFromProduct = await pool.query(`
     SELECT farm_id, AVG(price) AS avg , date_part('year' ,pricestamp.date) AS year, date_part('${type}', pricestamp.date) AS ${type}
     FROM price
@@ -96,6 +100,7 @@ const getAvgByProductOnTime = async (id, type) => {
     GROUP BY farm_id,product_id, year, ${type}
     ORDER BY farm_id ASC, year ASC, ${type} ASC
   `);
+
   const formattedData = timeFromProduct.rows.reduce((sum, row) => {
     const data = {
       time: `${typeFormatConvert(type, row[type])} ${row.year}`,
@@ -108,11 +113,13 @@ const getAvgByProductOnTime = async (id, type) => {
     sum.push(data);
     return sum;
   }, []);
+
   return formattedData;
 };
 
 export const getAvgByProduct = async (id) => {
   const byWeek = await getAvgByProductOnTime(id, 'week');
   const byMonth = await getAvgByProductOnTime(id, 'month');
+
   return [...byWeek, ...byMonth];
 };
