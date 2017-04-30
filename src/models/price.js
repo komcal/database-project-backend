@@ -62,11 +62,7 @@ const getAvgByProductOnTime = async (id, type) => {
 
   const farmIdFromProduct = await pool.query(`
     SELECT DISTINCT farm_id, name
-    FROM price
-    JOIN pricestamp
-      ON price.price_id = pricestamp.id
-    JOIN farmproduct
-      ON farmproduct.id = farmproductid
+    FROM farmproduct
     JOIN farm
       ON farm_id = farm.id
     WHERE product_id = ${id}
@@ -81,9 +77,7 @@ const getAvgByProductOnTime = async (id, type) => {
   const timeFromProduct = await pool.query(`
     SELECT DISTINCT date_part('year' ,pricestamp.date) AS year,
                     date_part('${type}', pricestamp.date) AS ${type}
-    FROM price
-    JOIN pricestamp
-      ON price.price_id = pricestamp.id
+    FROM pricestamp
     JOIN farmproduct
       ON farmproduct.id = farmproductid
     WHERE product_id = ${id}
