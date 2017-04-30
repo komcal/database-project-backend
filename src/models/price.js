@@ -78,7 +78,8 @@ const getAvgByProductOnTime = async (id, type) => {
   `);
   const formattedData = timeFromProduct.rows.reduce((sum, row) => {
     const data = {
-      time: `${row.year} ${row[type]}`
+      time: `${row.year} ${row[type]}`,
+      type
     };
     const price = avgFromProduct.rows.filter(val => (val.year === row.year && val[type] === row[type]));
     price.forEach((val) => {
@@ -90,6 +91,8 @@ const getAvgByProductOnTime = async (id, type) => {
   return formattedData;
 };
 
-export const getAvgByProduct = (id) => {
-  return getAvgByProductOnTime(id, 'month');
+export const getAvgByProduct = async (id) => {
+  const byWeek = await getAvgByProductOnTime(id, 'week');
+  const byMonth = await getAvgByProductOnTime(id, 'month');
+  return [...byWeek, ...byMonth];
 };
