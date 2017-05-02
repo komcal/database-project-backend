@@ -37,3 +37,87 @@ export const getPriceByProduct = async (id) => {
   };
   return res;
 };
+
+const getAvgByProductOnTime = async (id, type) => {
+  const typeFormatConvert = (valuetype, value) => {
+    if (valuetype === 'week') {
+      return `week ${value},`;
+    }
+    switch (value) {
+      case 1: return 'JAN';
+      case 2: return 'FEB';
+      case 3: return 'MAR';
+      case 4: return 'APR';
+      case 5: return 'MAY';
+      case 6: return 'JUN';
+      case 7: return 'JUL';
+      case 8: return 'AUG';
+      case 9: return 'SEP';
+      case 10: return 'OCT';
+      case 11: return 'NOV';
+      case 12: return 'DEC';
+      default: return 'YEAR';
+    }
+  };
+
+  const farmIdFromProduct = await pool.query(`
+    SELECT DISTINCT farm_id, name
+    FROM farmproduct
+    JOIN farm
+      ON farm_id = farm.id
+    WHERE product_id = ${id}
+    ORDER BY farm_id ASC
+  `);
+
+  const farmIdToName = farmIdFromProduct.rows.reduce((sum, val) => {
+    sum[val.farm_id] = val.name.replace(/\s+$/, '');
+    return sum;
+  }, {});
+
+  const timeFromProduct = await pool.query(`
+    SELECT DISTINCT date_part('year' ,pricestamp.date) AS year,
+                    date_part('${type}', pricestamp.date) AS ${type}
+    FROM pricestamp
+    JOIN farmproduct
+      ON farmproduct.id = farmproductid
+    WHERE product_id = ${id}
+    ORDER BY year ASC, ${type} ASC
+  `);
+
+  const avgFromProduct = await pool.query(`
+    SELECT  farm_id,
+            AVG(price) AS avg,
+            date_part('year' ,pricestamp.date) AS year,
+            date_part('${type}', pricestamp.date) AS ${type}
+    FROM price
+    JOIN pricestamp
+      ON price.price_id = pricestamp.id
+    JOIN farmproduct
+      ON farmproduct.id = farmproductid
+    WHERE product_id = ${id}
+    GROUP BY farm_id,product_id, year, ${type}
+    ORDER BY farm_id ASC, year ASC, ${type} ASC
+  `);
+
+  const formattedData = timeFromProduct.rows.reduce((sum, row) => {
+    const data = {
+      time: `${typeFormatConvert(type, row[type])} ${row.year}`,
+      type
+    };
+    const price = avgFromProduct.rows.filter(val => (val.year === row.year && val[type] === row[type]));
+    price.forEach((val) => {
+      data[farmIdToName[val.farm_id]] = val.avg;
+    });
+    sum.push(data);
+    return sum;
+  }, []);
+
+  return formattedData;
+};
+
+export const getAvgByProduct = async (id) => {
+  const byWeek = await getAvgByProductOnTime(id, 'week');
+  const byMonth = await getAvgByProductOnTime(id, 'month');
+
+  return [...byWeek, ...byMonth];
+};
