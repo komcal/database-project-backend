@@ -75,28 +75,29 @@ const getAvgByProductOnTime = async (id, type) => {
   }, {});
 
   const timeFromProduct = await pool.query(`
-    SELECT DISTINCT date_part('year' ,pricestamp.date) AS year,
-                    date_part('${type}', pricestamp.date) AS ${type}
+    SELECT DISTINCT date_part('year' ,date) AS year,
+                    date_part('${type}', date) AS ${type}
     FROM pricestamp
     JOIN farmproduct
       ON farmproduct.id = farmproductid
+    JOIN DATE
+      ON pricestamp.date_id = date.id
     WHERE product_id = ${id}
     ORDER BY year ASC, ${type} ASC
   `);
 
   const avgFromProduct = await pool.query(`
-    SELECT  farm_id,
-            AVG(price) AS avg,
-            date_part('year' ,pricestamp.date) AS year,
-            date_part('${type}', pricestamp.date) AS ${type}
+    SELECT farm_id, AVG(price), date_part('${type}' ,date) AS YEAR, date_part('${type}', date) AS ${type}
     FROM price
     JOIN pricestamp
       ON price.price_id = pricestamp.id
     JOIN farmproduct
       ON farmproduct.id = farmproductid
+    JOIN DATE
+      ON pricestamp.date_id = date.id
     WHERE product_id = ${id}
     GROUP BY farm_id,product_id, year, ${type}
-    ORDER BY farm_id ASC, year ASC, ${type} ASC
+    ORDER BY farm_id ASC, YEAR ASC, ${type} ASC
   `);
 
   const formattedData = timeFromProduct.rows.reduce((sum, row) => {
