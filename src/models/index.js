@@ -1,2 +1,2 @@
-export { getAllFarm, getFarmByID } from './farm';
+export { getAllFarm, getFarmByID, getProduct } from './farm';
 export { getAvgByProduct, getCorrByProduct } from './price';

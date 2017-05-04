@@ -144,7 +144,7 @@ export const getOldCorrAllProduct = async (id1, id2) => {
 };
 export const getCoordinateAllProduct = async (id1, id2) => {
   const res = await pool.query(`
-    WITH p AS (
+    WITH temp AS (
       SELECT date_id, AVG(price), product_id
       FROM pricestamp
       JOIN price
@@ -166,20 +166,20 @@ export const getCoordinateAllProduct = async (id1, id2) => {
       GROUP BY date_id,product_id
     )
 
-    SELECT p1.date_id AS id, p1.avg AS avg1, p2.avg AS avg2
-    FROM p AS p1
-    JOIN p AS p2
-      ON p1.date_id = p2.date_id
-    WHERE p1.product_id = ${id1}
-      AND p2.product_id = ${id2}
-    ORDER BY p1.date_id ASC
+    SELECT temp1.date_id AS id, temp1.avg AS avg1, temp2.avg AS avg2
+    FROM temp AS temp1
+    JOIN temp AS temp2
+      ON temp1.date_id = temp2.date_id
+    WHERE temp1.product_id = ${id1}
+      AND temp2.product_id = ${id2}
+    ORDER BY temp1.date_id ASC
   `);
   return res.rows;
 };
 
 const getCorrAllProduct = async (id1, id2) => {
   const res = await pool.query(`
-    WITH p AS (
+    WITH temp AS (
       SELECT date_id, AVG(price), product_id
       FROM pricestamp
       JOIN price
@@ -202,11 +202,11 @@ const getCorrAllProduct = async (id1, id2) => {
     )
 
     SELECT corr(p1.avg, p2.avg) AS corr
-    FROM p AS p1
-    JOIN p AS p2
-      ON p1.date_id = p2.date_id
-    WHERE p1.product_id = ${id1}
-      AND p2.product_id = ${id2}
+    FROM temp AS temp1
+    JOIN temp AS temp2
+      ON temp1.date_id = temp2.date_id
+    WHERE temp1.product_id = ${id1}
+      AND temp2.product_id = ${id2}
   `);
   return res.rows[0].corr;
 };
