@@ -120,5 +120,135 @@ export const getAvgByProduct = async (id) => {
   const byWeek = await getAvgByProductOnTime(id, 'week');
   const byMonth = await getAvgByProductOnTime(id, 'month');
 
-  return [...byWeek, ...byMonth];
+  return [...byWeek, ...byMonth].map((item, id) => ({ ...item, id }));
+};
+
+export const getOldCorrAllProduct = async (id1, id2) => {
+  const avg1 = await pool.query(`
+    SELECT date_id, AVG(price) AS avg
+    FROM pricestamp
+    JOIN price
+      ON price.price_id = pricestamp.id
+    JOIN farmproduct
+      ON pricestamp.farmproductid = farmproduct.id
+    WHERE date_id IN (
+      SELECT DISTINCT T1.date_id
+      FROM pricestamp AS T1
+      JOIN pricestamp AS T2
+        ON T1.date_id = T2.date_id
+      JOIN farmproduct AS T3
+        ON T1.farmproductid = T3.id
+      JOIN farmproduct AS T4
+        ON T2.farmproductid = T4.id
+      WHERE T3.product_id = ${id1}
+        AND T4.product_id = ${id2}
+    )
+      AND product_id = ${id1}
+    GROUP BY date_id
+    ORDER BY date_id ASC`);
+
+  const avg2 = await pool.query(`
+    SELECT date_id, AVG(price) AS avg
+    FROM pricestamp
+    JOIN price
+      ON price.price_id = pricestamp.id
+    JOIN farmproduct
+      ON pricestamp.farmproductid = farmproduct.id
+    WHERE date_id IN (
+      SELECT DISTINCT T1.date_id
+      FROM pricestamp AS T1
+      JOIN pricestamp AS T2
+        ON T1.date_id = T2.date_id
+      JOIN farmproduct AS T3
+        ON T1.farmproductid = T3.id
+      JOIN farmproduct AS T4
+        ON T2.farmproductid = T4.id
+      WHERE T3.product_id = ${id1}
+        AND T4.product_id = ${id2}
+    )
+      AND product_id = ${id2}
+    GROUP BY date_id
+    ORDER BY date_id ASC`);
+
+  const data = [];
+  for (let i = 0; i < avg2.rows.length; i += 1) {
+    data.push({
+      id: avg2.rows[i].date_id,
+      price1: avg1.rows[i].avg,
+      price2: avg2.rows[i].avg
+    });
+  }
+  return data;
+};
+export const getCoordinateAllProduct = async (id1, id2) => {
+  const res = await pool.query(`
+    WITH p AS (
+      SELECT date_id, AVG(price), product_id
+      FROM pricestamp
+      JOIN price
+        ON price.price_id = pricestamp.id
+      JOIN farmproduct
+        ON pricestamp.farmproductid = farmproduct.id
+      WHERE date_id IN (
+          SELECT DISTINCT T1.date_id
+          FROM pricestamp AS T1
+          JOIN pricestamp AS T2
+            ON T1.date_id = T2.date_id
+          JOIN farmproduct AS T3
+            ON T1.farmproductid = T3.id
+          JOIN farmproduct AS T4
+            ON T2.farmproductid = T4.id
+          WHERE T3.product_id = ${id1}
+            AND T4.product_id = ${id2}
+      )
+      GROUP BY date_id,product_id
+    )
+    SELECT p1.date_id AS id, p1.avg AS avg1, p2.avg AS avg2
+    FROM p AS p1
+    JOIN p AS p2
+      ON p1.date_id = p2.date_id
+    WHERE p1.product_id = ${id1}
+      AND p2.product_id = ${id2}
+    ORDER BY p1.date_id ASC
+  `);
+  return res.rows;
+};
+
+const getCorrAllProduct = async (id1, id2) => {
+  const res = await pool.query(`
+    WITH p AS (
+      SELECT date_id, AVG(price), product_id
+      FROM pricestamp
+      JOIN price
+        ON price.price_id = pricestamp.id
+      JOIN farmproduct
+        ON pricestamp.farmproductid = farmproduct.id
+      WHERE date_id IN (
+          SELECT DISTINCT T1.date_id
+          FROM pricestamp AS T1
+          JOIN pricestamp AS T2
+            ON T1.date_id = T2.date_id
+          JOIN farmproduct AS T3
+            ON T1.farmproductid = T3.id
+          JOIN farmproduct AS T4
+            ON T2.farmproductid = T4.id
+          WHERE T3.product_id = ${id1}
+            AND T4.product_id = ${id2}
+      )
+      GROUP BY date_id,product_id
+    )
+    SELECT corr(p1.avg, p2.avg) AS corr
+    FROM p AS p1
+    JOIN p AS p2
+      ON p1.date_id = p2.date_id
+    WHERE p1.product_id = ${id1}
+      AND p2.product_id = ${id2}
+  `);
+  return res.rows[0].corr;
+};
+
+export const getCorrByProduct = async (id1, id2) => {
+  const data = await getCoordinateAllProduct(id1, id2);
+  const corr = await getCorrAllProduct(id1, id2);
+  return { data, corr };
 };
