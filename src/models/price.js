@@ -165,6 +165,7 @@ export const getCoordinateAllProduct = async (id1, id2) => {
       )
       GROUP BY date_id,product_id
     )
+
     SELECT p1.date_id AS id, p1.avg AS avg1, p2.avg AS avg2
     FROM p AS p1
     JOIN p AS p2
@@ -199,6 +200,7 @@ const getCorrAllProduct = async (id1, id2) => {
       )
       GROUP BY date_id,product_id
     )
+
     SELECT corr(p1.avg, p2.avg) AS corr
     FROM p AS p1
     JOIN p AS p2
