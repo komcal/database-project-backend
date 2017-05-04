@@ -64,7 +64,7 @@ const getAvgByProductOnTime = async (id, type) => {
 
   const formattedData = timeFromProduct.rows.reduce((sum, row) => {
     const data = {
-      time: `${typeFormatConvert(type, row[type])} ${row.year}`,
+      name: `${typeFormatConvert(type, row[type])} ${row.year}`,
       type
     };
     const price = avgFromProduct.rows.filter(val => (val.year === row.year && val[type] === row[type]));
@@ -78,12 +78,29 @@ const getAvgByProductOnTime = async (id, type) => {
   return formattedData;
 };
 
+const getAvgOnFarmByProduct = async (id) => {
+  const res = await pool.query(`
+    SELECT farm.id AS farm_id, farm.name AS farm_name, avg(price.price) AS farm_avg
+    FROM pricestamp
+    JOIN farmproduct
+      ON farmproduct.id = pricestamp.farmproductid
+    JOIN price
+      ON pricestamp.id = price_id
+    JOIN farm
+      ON farm.id = farmproduct.farm_id
+    WHERE farmproduct.product_id = ${id}
+    GROUP BY farm.id`
+  );
+  return res.rows.map(item => ({ ...item, farm_name: item.farm_name.replace(/\s+$/, '') }));
+};
+
 export const getAvgByProduct = async (id) => {
   const byWeek = await getAvgByProductOnTime(id, 'week');
   const byMonth = await getAvgByProductOnTime(id, 'month');
-
-  return [...byWeek, ...byMonth].map((item, id) => ({ ...item, id }));
+  const farm = await getAvgOnFarmByProduct(id);
+  return { data: [...byWeek, ...byMonth].map((item, id) => ({ ...item, id })), farm };
 };
+
 
 export const getOldCorrAllProduct = async (id1, id2) => {
   const avg1 = await pool.query(`
