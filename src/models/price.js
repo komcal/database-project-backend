@@ -82,10 +82,18 @@ const newGetAvgByProductOnTime = async (id, type) => {
   const t = ((x) => {
     switch (x) {
       case 'week': return 7;
-      case 'month': return 30;
-      case 'halfyear': return 180;
-      case 'year': return 365;
+      case 'month': return 4;
+      case 'halfyear': return 6;
+      case 'year': return 12;
       default: return 99999999;
+    }
+  })(type);
+
+  const swtype = ((x) => {
+    switch (x) {
+      case 'week': return 'day';
+      case 'month': return 'week';
+      default: return '';
     }
   })(type);
 
@@ -105,23 +113,25 @@ const newGetAvgByProductOnTime = async (id, type) => {
 
   const timeFromProduct = await pool.query(`
     SELECT DISTINCT date_part('year' ,date) AS year,
-                    date_part('month', date) AS month,
-                    date_part('day', date) AS day
+                    date_part('month', date) AS month
+                    ${(type === 'week' || type === 'month') ? `,date_part('${swtype}', date) AS special` : ''}
     FROM pricestamp
     JOIN farmproduct
       ON farmproduct.id = farmproductid
     JOIN DATE
       ON pricestamp.date_id = date.id
     WHERE product_id = ${id}
-    ORDER BY year DESC, month DESC, day DESC
+    ORDER BY year DESC, month DESC ${(type === 'week' || type === 'month') ? ', special DESC' : ''}
     fetch first ${t} rows only
   `);
+
+  console.log('1st');
 
   const avgFromProduct = await pool.query(`
     SELECT farm_id, AVG(price),
             date_part('year' ,date) AS year,
-            date_part('month', date) AS month,
-            date_part('day', date) AS day
+            date_part('month', date) AS month
+            ${(type === 'week' || type === 'month') ? `,date_part('${swtype}', date) AS special` : ''}
     FROM price
     JOIN pricestamp
       ON price.price_id = pricestamp.id
@@ -130,17 +140,18 @@ const newGetAvgByProductOnTime = async (id, type) => {
     JOIN DATE
       ON pricestamp.date_id = date.id
     WHERE product_id = ${id}
-    GROUP BY farm_id,product_id, year, month, day
-    ORDER BY year DESC, month DESC, day DESC, farm_id ASC
+    GROUP BY farm_id,product_id, year, month ${(type === 'week' || type === 'month') ? ', special' : ''}
+    ORDER BY year DESC, month DESC ${(type === 'week' || type === 'month') ? ', special DESC' : ''}, farm_id ASC
     fetch first ${t * farmIdFromProduct.rows.length} rows only
   `);
+  console.log('2nd');
 
   const formattedData = timeFromProduct.rows.reduce((sum, row) => {
     const data = {
-      name: `${row.day}/${row.month}/${row.year}`,
+      name: `${row.special ? `${swtype === 'week' ? 'week' : ''}${row.special}${swtype === 'week' ? ' month ' : '/'}` : ''}${row.month}/${row.year}`,
       type
     };
-    const price = avgFromProduct.rows.filter(val => (val.year === row.year && val.month === row.month && val.day === row.day));
+    const price = avgFromProduct.rows.filter(val => (val.year === row.year && val.month === row.month && val.special === row.special));
     price.forEach((val) => {
       data[farmIdToName[val.farm_id]] = val.avg;
     });
@@ -148,8 +159,9 @@ const newGetAvgByProductOnTime = async (id, type) => {
     return sum;
   }, []);
 
-  return formattedData;
+  return formattedData.reverse();
 };
+
 
 const getAvgOnFarmByProduct = async (id) => {
   const res = await pool.query(`
@@ -171,9 +183,10 @@ export const getAvgByProduct = async (id) => {
   const byWeek = await newGetAvgByProductOnTime(id, 'week');
   const byMonth = await newGetAvgByProductOnTime(id, 'month');
   const byHYear = await newGetAvgByProductOnTime(id, 'halfyear');
+  console.log(byHYear);
   const byYear = await newGetAvgByProductOnTime(id, 'year');
   const farm = await getAvgOnFarmByProduct(id);
-  return { data: [...byWeek, ...byMonth, byHYear, ...byYear].map((item, id) => ({ ...item, id })), farm };
+  return { data: [...byWeek, ...byMonth, ...byHYear, ...byYear].map((item, id) => ({ ...item, id })), farm };
 };
 
 export const getOldCorrAllProduct = async (id1, id2) => {
