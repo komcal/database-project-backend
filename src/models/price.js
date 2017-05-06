@@ -1,6 +1,6 @@
 import pool from '../db-config';
 
-const getAvgByProductOnTime = async (id, type) => {
+export const getAvgByProductOnTime = async (id, type) => {
   const typeFormatConvert = (valuetype, value) => {
     if (valuetype === 'week') {
       return `week ${value},`;
