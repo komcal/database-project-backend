@@ -305,7 +305,7 @@ const getCorrAllProduct = async (id1, id2) => {
       GROUP BY date_id,product_id
     )
 
-    SELECT corr(p1.avg, p2.avg) AS corr
+    SELECT corr(temp.avg, temp.avg) AS corr
     FROM temp AS temp1
     JOIN temp AS temp2
       ON temp1.date_id = temp2.date_id
