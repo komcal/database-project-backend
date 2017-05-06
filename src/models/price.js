@@ -1,3 +1,4 @@
+/* eslint-disable camelcase*/
 import pool from '../db-config';
 
 export const getAvgByProductOnTime = async (id, type) => {
@@ -386,10 +387,10 @@ export const getCorrByProduct = async (id1, id2) => {
   const dataYear = await getCoordinateAllProduct(id1, id2, 'year');
 
   const data = [...dataWeek.map(x => ({ ...x, type: 'week' })), ...dataMonth.map(x => ({ ...x, type: 'month' })), ...dataHYear.map(x => ({ ...x, type: 'halfyear' })), ...dataYear.map(x => ({ ...x, type: 'year' }))];
-  const corrWeek = await getCorrAllProduct(id1, id2, 'week');
-  const corrMonth = await getCorrAllProduct(id1, id2, 'month');
-  const corrHalfYear = await getCorrAllProduct(id1, id2, 'halfyear');
-  const corrYear = await getCorrAllProduct(id1, id2, 'year');
+  const corr_week = await getCorrAllProduct(id1, id2, 'week');
+  const corr_month = await getCorrAllProduct(id1, id2, 'month');
+  const corr_halfyear = await getCorrAllProduct(id1, id2, 'halfyear');
+  const corr_year = await getCorrAllProduct(id1, id2, 'year');
 
   const corr = {
     corrWeek,
