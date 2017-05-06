@@ -13,16 +13,17 @@ const newGetAvgByProductOnTime = async (id, type) => {
   })(type);
 
   const farmIdFromProduct = await pool.query(`
-    SELECT DISTINCT id, name
-    FROM farm
-    WHERE id IN(
-        SELECT farm_id
-        FROM farmproduct
-        WHERE product_id = ${id}
-      )
-    ORDER BY id ASC
+  SELECT DISTINCT id, name
+  FROM farm
+  WHERE EXISTS (
+    SELECT *
+    FROM farmproduct
+    WHERE product_id = ${id}
+      AND farm_id = farm.id
+  )
+  ORDER BY id ASC
   `);
-
+  console.log(farmIdFromProduct.rows);
   const farmIdToName = farmIdFromProduct.rows.reduce((sum, val) => {
     sum[val.farm_id] = val.name.replace(/\s+$/, '');
     return sum;
@@ -34,14 +35,17 @@ const newGetAvgByProductOnTime = async (id, type) => {
                     ${type === 'week' ? ",date_part('day', date) AS special" : ''}
                     ${type === 'month' ? ",date_part('day',date_trunc('week', date)) AS special" : ''}
     FROM pricestamp
-    JOIN farmproduct
-      ON farmproduct.id = farmproductid
     JOIN DATE
       ON pricestamp.date_id = date.id
-    WHERE product_id = ${id}
+    WHERE farmproductid IN (
+      SELECT id
+      FROM farmproduct
+      WHERE product_id = ${id}
+    ) 
     ORDER BY year DESC, month DESC ${(type === 'week' || type === 'month') ? ', special DESC' : ''}
     fetch first ${t} rows only
   `);
+
   const avgFromProduct = await pool.query(`
     SELECT farm_id, AVG(price),
             date_part('year' ,date) AS year,
