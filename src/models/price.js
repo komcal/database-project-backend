@@ -78,7 +78,7 @@ const newGetAvgByProductOnTime = async (id, type) => {
     };
     const price = avgFromProduct.rows.filter(val => (val.year === row.year && val.month === row.month && val.special === row.special));
     price.forEach((val) => {
-      data[farmIdToName[val.farm_id]] = val.avg;
+      data[farmIdToName[val.farm_id]] = val.avg.toFixed(2);
     });
     sum.push(data);
     return sum;
@@ -146,10 +146,10 @@ const getAvgOnFarmByProduct = async (id) => {
 
   const res = result.map(item => ({
     ...item,
-    farm_avg_week: byWeek.filter(x => (x.farm_id === item.farm_id))[0].farm_avg_week,
-    farm_avg_month: byMonth.filter(x => (x.farm_id === item.farm_id))[0].farm_avg_month,
-    farm_avg_halfyear: byHYear.filter(x => (x.farm_id === item.farm_id))[0].farm_avg_halfyear,
-    farm_avg_year: byYear.filter(x => (x.farm_id === item.farm_id))[0].farm_avg_year
+    farm_avg_week: byWeek.filter(x => (x.farm_id === item.farm_id))[0].farm_avg_week.toFixed(2),
+    farm_avg_month: byMonth.filter(x => (x.farm_id === item.farm_id))[0].farm_avg_month.toFixed(2),
+    farm_avg_halfyear: byHYear.filter(x => (x.farm_id === item.farm_id))[0].farm_avg_halfyear.toFixed(2),
+    farm_avg_year: byYear.filter(x => (x.farm_id === item.farm_id))[0].farm_avg_year.toFixed(2)
   }));
   console.log(res);
   return res;
@@ -247,7 +247,7 @@ const getCorrAllProduct = async (id1, id2, type) => {
     fetch first ${t} rows only
   ) AS T
 `);
-  return res.rows[0].corr || 0;
+  return (res.rows[0].corr || 0).toFixed(2);
 };
 
 export const getCorrByProduct = async (id1, id2) => {
@@ -270,4 +270,26 @@ export const getCorrByProduct = async (id1, id2) => {
   };
 
   return { data, corr };
+};
+
+
+export const getCropByProvinceAndProduct = async (province, product) => {
+  const data = await pool.query(`
+    SELECT sum(plantarea) AS sum_plantarea, sum(harvestarea) AS sum_harvestarea, sum(goods) AS sum_goods, year
+    FROM cropindistrict
+    WHERE product_id = ${product}
+      AND address_id IN (
+        SELECT id
+        FROM address
+        WHERE province_id = ${province}
+      )
+    GROUP BY year
+  `);
+  return data.rows.map(d => (
+    {
+      year: d.year,
+      plantarea: d.sum_plantarea,
+      harvestarea: d.sum_harvestarea,
+      goods: d.sum_goods
+    }));
 };
