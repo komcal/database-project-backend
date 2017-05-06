@@ -89,14 +89,6 @@ const newGetAvgByProductOnTime = async (id, type) => {
     }
   })(type);
 
-  const swtype = ((x) => {
-    switch (x) {
-      case 'week': return 'day';
-      case 'month': return 'week';
-      default: return '';
-    }
-  })(type);
-
   const farmIdFromProduct = await pool.query(`
     SELECT DISTINCT farm_id, name
     FROM farmproduct
@@ -114,7 +106,8 @@ const newGetAvgByProductOnTime = async (id, type) => {
   const timeFromProduct = await pool.query(`
     SELECT DISTINCT date_part('year' ,date) AS year,
                     date_part('month', date) AS month
-                    ${(type === 'week' || type === 'month') ? `,date_part('${swtype}', date) AS special` : ''}
+                    ${type === 'week' ? ",date_part('day', date) AS special" : ''}
+                    ${type === 'month' ? ",date_part('day',date_trunc('week', date)) AS special" : ''}
     FROM pricestamp
     JOIN farmproduct
       ON farmproduct.id = farmproductid
@@ -124,12 +117,12 @@ const newGetAvgByProductOnTime = async (id, type) => {
     ORDER BY year DESC, month DESC ${(type === 'week' || type === 'month') ? ', special DESC' : ''}
     fetch first ${t} rows only
   `);
-
   const avgFromProduct = await pool.query(`
     SELECT farm_id, AVG(price),
             date_part('year' ,date) AS year,
             date_part('month', date) AS month
-            ${(type === 'week' || type === 'month') ? `,date_part('${swtype}', date) AS special` : ''}
+            ${type === 'week' ? ",date_part('day', date) AS special" : ''}
+            ${type === 'month' ? ",date_part('day',date_trunc('week', date)) AS special" : ''}
     FROM price
     JOIN pricestamp
       ON price.price_id = pricestamp.id
@@ -143,9 +136,16 @@ const newGetAvgByProductOnTime = async (id, type) => {
     fetch first ${t * farmIdFromProduct.rows.length} rows only
   `);
 
+  const formatName = (data) => {
+    if (type === 'month') {
+      return `${data.special}-${data.special + 7}/${data.month}/${data.year}`;
+    }
+    return `${data.special ? `${data.special}/` : ''}${data.month}/${data.year}`;
+  };
+
   const formattedData = timeFromProduct.rows.reduce((sum, row) => {
     const data = {
-      name: `${row.special ? `${swtype === 'week' ? 'week' : ''}${row.special}${swtype === 'week' ? ' month ' : '/'}` : ''}${row.month}/${row.year}`,
+      name: formatName(row),
       type
     };
     const price = avgFromProduct.rows.filter(val => (val.year === row.year && val.month === row.month && val.special === row.special));
