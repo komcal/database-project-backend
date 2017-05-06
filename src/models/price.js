@@ -13,17 +13,13 @@ const newGetAvgByProductOnTime = async (id, type) => {
   })(type);
 
   const farmIdFromProduct = await pool.query(`
-  SELECT DISTINCT id, name
-  FROM farm
-  WHERE EXISTS (
-    SELECT *
+    SELECT DISTINCT farm_id, name
     FROM farmproduct
+    JOIN farm
+      ON farm_id = farm.id
     WHERE product_id = ${id}
-      AND farm_id = farm.id
-  )
-  ORDER BY id ASC
+    ORDER BY farm_id ASC
   `);
-  console.log(farmIdFromProduct.rows);
   const farmIdToName = farmIdFromProduct.rows.reduce((sum, val) => {
     sum[val.farm_id] = val.name.replace(/\s+$/, '');
     return sum;
