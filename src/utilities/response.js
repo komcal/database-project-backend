@@ -1,7 +1,6 @@
-export const respondErrors = res => err => {
-  console.error(err);
-  res.status(err.code || 500).send(err || { message: 'Internal Error' });
-};
+export const respondErrors = res => err => (
+  res.status(err.code || 500).send(err || { message: 'Internal Error' })
+);
 
 export const respondResult = res => result => (
   res.status(200).send(result)
