@@ -159,10 +159,19 @@ const newGetAvgByProductOnTime = async (id, type) => {
   return formattedData.reverse();
 };
 
-
-const getAvgOnFarmByProduct = async (id) => {
+const getAvgOnFarmByProducOnTime = async (id, type) => {
+  const t = ((x) => {
+    switch (x) {
+      case 'week': return 7;
+      case 'month': return 30;
+      case 'halfyear': return 180;
+      case 'year': return 360;
+      default: return 99999999;
+    }
+  })(type);
+  console.log(type);
   const res = await pool.query(`
-    SELECT farm.id AS farm_id, farm.name AS farm_name, avg(price.price) AS farm_avg
+SELECT farm.id AS farm_id,avg(price.price) AS farm_avg_${type}
     FROM pricestamp
     JOIN farmproduct
       ON farmproduct.id = pricestamp.farmproductid
@@ -170,10 +179,52 @@ const getAvgOnFarmByProduct = async (id) => {
       ON pricestamp.id = price_id
     JOIN farm
       ON farm.id = farmproduct.farm_id
+    JOIN DATE
+      ON date.id = pricestamp.date_id
     WHERE farmproduct.product_id = ${id}
-    GROUP BY farm.id`
-  );
-  return res.rows.map(item => ({ ...item, farm_name: item.farm_name.replace(/\s+$/, '') }));
+    AND (
+        SELECT MAX(DATE)
+        FROM pricestamp
+        JOIN farmproduct
+        ON farmproduct.id = pricestamp.farmproductid
+        JOIN DATE
+        ON date.id = pricestamp.date_id
+        WHERE farmproduct.product_id = ${id}
+        ) - date.date < ${t}
+    GROUP BY farm.id
+  `);
+  return res.rows;
+};
+
+const getAvgOnFarmByProduct = async (id) => {
+  const farmIdFromProduct = await pool.query(`
+    SELECT DISTINCT farm_id, name
+    FROM farmproduct
+    JOIN farm
+      ON farm_id = farm.id
+    WHERE product_id = ${id}
+    ORDER BY farm_id ASC
+  `);
+  const result = farmIdFromProduct.rows.map(item => (
+    {
+      farm_id: item.farm_id,
+      farm_name: item.name.replace(/\s+$/, '')
+    }
+  ));
+  const byWeek = await getAvgOnFarmByProducOnTime(id, 'week');
+  const byMonth = await getAvgOnFarmByProducOnTime(id, 'month');
+  const byHYear = await getAvgOnFarmByProducOnTime(id, 'halfyear');
+  const byYear = await getAvgOnFarmByProducOnTime(id, 'year');
+
+  const res = result.map(item => ({
+    ...item,
+    farm_avg_week: byWeek.filter(x => (x.farm_id === item.farm_id))[0].farm_avg_week,
+    farm_avg_month: byMonth.filter(x => (x.farm_id === item.farm_id))[0].farm_avg_month,
+    farm_avg_halfyear: byHYear.filter(x => (x.farm_id === item.farm_id))[0].farm_avg_halfyear,
+    farm_avg_year: byYear.filter(x => (x.farm_id === item.farm_id))[0].farm_avg_year
+  }));
+  console.log(res);
+  return res;
 };
 
 export const getAvgByProduct = async (id) => {
@@ -242,7 +293,16 @@ export const getOldCorrAllProduct = async (id1, id2) => {
   }
   return data;
 };
-export const getCoordinateAllProduct = async (id1, id2) => {
+export const getCoordinateAllProduct = async (id1, id2, type) => {
+  const t = ((x) => {
+    switch (x) {
+      case 'week': return 7;
+      case 'month': return 30;
+      case 'halfyear': return 180;
+      case 'year': return 360;
+      default: return 99999999;
+    }
+  })(type);
   const res = await pool.query(`
     WITH temp AS (
       SELECT date_id, AVG(price), product_id
@@ -266,53 +326,77 @@ export const getCoordinateAllProduct = async (id1, id2) => {
       GROUP BY date_id,product_id
     )
 
-    SELECT temp1.date_id AS id, temp1.avg AS avg1, temp2.avg AS avg2
+    SELECT temp1.date_id AS id, temp1.avg AS x, temp2.avg AS y
     FROM temp AS temp1
     JOIN temp AS temp2
       ON temp1.date_id = temp2.date_id
     WHERE temp1.product_id = ${id1}
       AND temp2.product_id = ${id2}
-    ORDER BY temp1.date_id ASC
+    ORDER BY temp1.date_id DESC
+    fetch first ${t} rows only
   `);
   return res.rows;
 };
 
-const getCorrAllProduct = async (id1, id2) => {
+const getCorrAllProduct = async (id1, id2, type) => {
+  const t = ((x) => {
+    switch (x) {
+      case 'week': return 7;
+      case 'month': return 30;
+      case 'halfyear': return 180;
+      case 'year': return 360;
+      default: return 99999999;
+    }
+  })(type);
   const res = await pool.query(`
-    WITH temp AS (
-      SELECT date_id, AVG(price), product_id
+  SELECT corr(x,y) FROM(
+    SELECT T1.avg AS x, T2.avg AS y
+    FROM (
+      SELECT date_id,farmproduct.product_id, avg(price) AS AVG
       FROM pricestamp
-      JOIN price
-        ON price.price_id = pricestamp.id
+      JOIN price 
+        ON pricestamp.id = price_id
       JOIN farmproduct
         ON pricestamp.farmproductid = farmproduct.id
-      WHERE date_id IN (
-          SELECT DISTINCT T1.date_id
-          FROM pricestamp AS T1
-          JOIN pricestamp AS T2
-            ON T1.date_id = T2.date_id
-          JOIN farmproduct AS T3
-            ON T1.farmproductid = T3.id
-          JOIN farmproduct AS T4
-            ON T2.farmproductid = T4.id
-          WHERE T3.product_id = ${id1}
-            AND T4.product_id = ${id2}
-      )
-      GROUP BY date_id,product_id
-    )
-
-    SELECT corr(temp1.avg, temp2.avg) AS corr
-    FROM temp AS temp1
-    JOIN temp AS temp2
-      ON temp1.date_id = temp2.date_id
-    WHERE temp1.product_id = ${id1}
-      AND temp2.product_id = ${id2}
-  `);
-  return res.rows[0].corr;
+      GROUP BY date_id, farmproduct.product_id 
+      ) AS T1
+    JOIN (
+      SELECT date_id,farmproduct.product_id, avg(price) AS AVG
+      FROM pricestamp
+      JOIN price 
+        ON pricestamp.id = price_id
+      JOIN farmproduct
+        ON pricestamp.farmproductid = farmproduct.id
+      GROUP BY date_id, farmproduct.product_id  
+      ) AS T2
+    ON T2.date_id = T1.date_id
+    WHERE T1.product_id = ${id1}
+      AND T2.product_id = ${id2}
+    ORDER BY T1.date_id DESC
+    fetch first ${t} rows only
+  ) AS T
+`);
+  return res.rows[0].corr || 0;
 };
 
 export const getCorrByProduct = async (id1, id2) => {
-  const data = await getCoordinateAllProduct(id1, id2);
-  const corr = await getCorrAllProduct(id1, id2);
+  const dataWeek = await getCoordinateAllProduct(id1, id2, 'week');
+  const dataMonth = await getCoordinateAllProduct(id1, id2, 'month');
+  const dataHYear = await getCoordinateAllProduct(id1, id2, 'halfyear');
+  const dataYear = await getCoordinateAllProduct(id1, id2, 'year');
+
+  const data = [...dataWeek.map(x => ({ ...x, type: 'week' })), ...dataMonth.map(x => ({ ...x, type: 'month' })), ...dataHYear.map(x => ({ ...x, type: 'halfyear' })), ...dataYear.map(x => ({ ...x, type: 'year' }))];
+  const corrWeek = await getCorrAllProduct(id1, id2, 'week');
+  const corrMonth = await getCorrAllProduct(id1, id2, 'month');
+  const corrHalfYear = await getCorrAllProduct(id1, id2, 'halfyear');
+  const corrYear = await getCorrAllProduct(id1, id2, 'year');
+
+  const corr = {
+    corrWeek,
+    corrMonth,
+    corrHalfYear,
+    corrYear
+  };
+
   return { data, corr };
 };
