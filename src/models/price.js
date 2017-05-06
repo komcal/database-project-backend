@@ -125,8 +125,6 @@ const newGetAvgByProductOnTime = async (id, type) => {
     fetch first ${t} rows only
   `);
 
-  console.log('1st');
-
   const avgFromProduct = await pool.query(`
     SELECT farm_id, AVG(price),
             date_part('year' ,date) AS year,
@@ -144,7 +142,6 @@ const newGetAvgByProductOnTime = async (id, type) => {
     ORDER BY year DESC, month DESC ${(type === 'week' || type === 'month') ? ', special DESC' : ''}, farm_id ASC
     fetch first ${t * farmIdFromProduct.rows.length} rows only
   `);
-  console.log('2nd');
 
   const formattedData = timeFromProduct.rows.reduce((sum, row) => {
     const data = {
@@ -183,7 +180,6 @@ export const getAvgByProduct = async (id) => {
   const byWeek = await newGetAvgByProductOnTime(id, 'week');
   const byMonth = await newGetAvgByProductOnTime(id, 'month');
   const byHYear = await newGetAvgByProductOnTime(id, 'halfyear');
-  console.log(byHYear);
   const byYear = await newGetAvgByProductOnTime(id, 'year');
   const farm = await getAvgOnFarmByProduct(id);
   return { data: [...byWeek, ...byMonth, ...byHYear, ...byYear].map((item, id) => ({ ...item, id })), farm };
@@ -305,7 +301,7 @@ const getCorrAllProduct = async (id1, id2) => {
       GROUP BY date_id,product_id
     )
 
-    SELECT corr(temp.avg, temp.avg) AS corr
+    SELECT corr(temp1.avg, temp2.avg) AS corr
     FROM temp AS temp1
     JOIN temp AS temp2
       ON temp1.date_id = temp2.date_id
