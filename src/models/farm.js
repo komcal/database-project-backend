@@ -16,21 +16,3 @@ export const getFarmByID = async (id) => {
   `);
   return res.rows;
 };
-
-export const getProduct = async () => {
-  const res = await pool.query(`
-    SELECT id, name
-    FROM product
-  `);
-  return res.rows;
-};
-
-export const getProvince = async () => {
-  const res = await pool.query(`
-    SELECT *
-    FROM province
-  `);
-  return res.rows.map(data => (
-     { ...data, name: data.name.replace(/\s+$/, '') }
-  ));
-};

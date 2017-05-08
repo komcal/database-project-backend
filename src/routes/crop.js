@@ -9,6 +9,7 @@ router.get('/:province/:product', async (req, res) => {
     const response = await getCropByProvinceAndProduct(req.params.province, req.params.product);
     respondResult(res)(response);
   } catch (err) {
+    console.error(err);
     respondErrors(res)(err);
   }
 });
