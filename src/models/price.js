@@ -97,7 +97,6 @@ const getAvgOnFarmByProducOnTime = async (id, type) => {
       default: return 99999999;
     }
   })(type);
-  console.log(type);
   const res = await pool.query(`
 SELECT farm.id AS farm_id,avg(price.price) AS farm_avg_${type}
     FROM pricestamp
@@ -151,7 +150,6 @@ const getAvgOnFarmByProduct = async (id) => {
     farm_avg_halfyear: parseFloat(byHYear.filter(x => (x.farm_id === item.farm_id))[0].farm_avg_halfyear.toFixed(2)),
     farm_avg_year: parseFloat(byYear.filter(x => (x.farm_id === item.farm_id))[0].farm_avg_year.toFixed(2))
   }));
-  console.log(res);
   return res;
 };
 
@@ -159,7 +157,6 @@ export const getAvgByProduct = async (id) => {
   const byWeek = await newGetAvgByProductOnTime(id, 'week');
   const byMonth = await newGetAvgByProductOnTime(id, 'month');
   const byHYear = await newGetAvgByProductOnTime(id, 'halfyear');
-  console.log(byWeek);
   const byYear = await newGetAvgByProductOnTime(id, 'year');
   const farm = await getAvgOnFarmByProduct(id);
   return { data: [...byWeek, ...byMonth, ...byHYear, ...byYear].map((item, id) => ({ ...item, id })), farm };
@@ -271,26 +268,4 @@ export const getCorrByProduct = async (id1, id2) => {
   };
 
   return { data, corr };
-};
-
-
-export const getCropByProvinceAndProduct = async (province, product) => {
-  const data = await pool.query(`
-    SELECT sum(plantarea) AS sum_plantarea, sum(harvestarea) AS sum_harvestarea, sum(goods) AS sum_goods, year
-    FROM cropindistrict
-    WHERE product_id = ${product}
-      AND address_id IN (
-        SELECT id
-        FROM address
-        WHERE province_id = ${province}
-      )
-    GROUP BY year
-  `);
-  return data.rows.map(d => (
-    {
-      year: parseInt(d.year, 10),
-      plantarea: parseFloat(d.sum_plantarea),
-      harvestarea: parseFloat(d.sum_harvestarea),
-      goods: parseFloat(d.sum_goods)
-    }));
 };

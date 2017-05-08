@@ -4,7 +4,7 @@ import { getAvgByProduct, getCorrByProduct } from '../models';
 
 const router = Router();
 
-router.get('/avg/:id', async (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
     const response = await getAvgByProduct(req.params.id);
     respondResult(res)(response);
