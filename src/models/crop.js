@@ -12,7 +12,6 @@ export const getCropByProvinceAndProduct = async (province, product) => {
       )
     GROUP BY year
   `);
-  console.log(data.rows);
   return data.rows.map(d => (
     {
       year: parseInt(d.year, 10),
